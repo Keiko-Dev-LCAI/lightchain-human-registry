@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightchain Human Registry: interactive concept demo</title>
+<meta name="description" content="Interactive concept demo of Lightchain Human Registry. One badge per passport. Pretend data only, no blockchain.">
+<style>
+  :root{
+    --bg:#0f1020; --panel:#181a33; --panel2:#1f2244; --line:#2c3060;
+    --text:#e9eaff; --muted:#a3a7d6; --accent:#7b6cff; --accent2:#4fd1c5;
+    --ok:#3ddc97; --warn:#ffcc66; --bad:#ff6b81; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif;line-height:1.45}
+  .wrap{width:100%;padding:clamp(12px,2.5vw,36px)}
+  header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  h1{font-size:clamp(1.3rem,2.4vw,2rem);margin:0}
+  h1 span{color:var(--accent)}
+  .tag{display:inline-block;padding:6px 12px;border-radius:999px;background:#3a2a10;color:var(--warn);
+    border:1px solid #6b5420;font-weight:600;font-size:.85rem}
+  .intro{color:var(--muted);max-width:none;margin:0 0 18px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;min-width:0}
+  .card h2{font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .card h2 .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:.8rem}
+  .sub{color:var(--muted);font-size:.88rem;margin:0 0 14px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:600;
+    background:var(--accent);color:#fff;transition:filter .15s,transform .05s}
+  button:hover{filter:brightness(1.1)} button:active{transform:translateY(1px)}
+  button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  button.warn{background:#a5672a}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .addr{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;word-break:break-all;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:10px 0}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:.9rem}
+  .badge.yes{background:rgba(61,220,151,.15);color:var(--ok);border:1px solid rgba(61,220,151,.4)}
+  .badge.no{background:rgba(255,107,129,.12);color:var(--bad);border:1px solid rgba(255,107,129,.35)}
+  select,input{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:10px;width:100%;min-width:0}
+  label{font-size:.85rem;color:var(--muted);display:block;margin:8px 0 4px}
+  .stage{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;margin-top:14px}
+  @media (max-width:520px){.stage{grid-template-columns:1fr;justify-items:center}}
+  .phone{width:150px;height:270px;border-radius:24px;border:3px solid #3b3f7a;background:#0b0c18;position:relative;
+    overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .phone .notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:50px;height:6px;border-radius:6px;background:#2a2d55}
+  .screen{position:absolute;inset:18px 10px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;font-size:.75rem;color:var(--muted);gap:8px}
+  .qr{display:grid;grid-template-columns:repeat(21,1fr);width:110px;height:110px;background:#fff;padding:6px;border-radius:6px}
+  .qr i{display:block} .qr i.b{background:#111}
+  .passport{width:70px;height:48px;border-radius:6px;background:linear-gradient(135deg,#3a2f8f,#7b6cff);
+    position:relative;animation:tap 1s ease-in-out infinite alternate}
+  .passport::after{content:"";position:absolute;right:8px;top:14px;width:18px;height:14px;border-radius:3px;background:#e3c46a}
+  @keyframes tap{from{transform:translateY(8px)}to{transform:translateY(-4px)}}
+  .waves{width:60px;height:24px;border-radius:50%;border:2px solid var(--accent2);opacity:.7;animation:pulse 1s infinite}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.3);opacity:0}}
+  .spinner{width:36px;height:36px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .check{font-size:2.4rem;color:var(--ok)}
+  ol.steps{list-style:none;margin:0;padding:0;font-size:.9rem}
+  ol.steps li{padding:5px 0 5px 26px;position:relative;color:var(--muted)}
+  ol.steps li::before{content:"○";position:absolute;left:4px}
+  ol.steps li.active{color:var(--text)} ol.steps li.active::before{content:"◔";color:var(--accent)}
+  ol.steps li.done{color:var(--ok)} ol.steps li.done::before{content:"✓"}
+  .msg{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:.92rem;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.4)}
+  .msg.warn{background:rgba(255,204,102,.1);border:1px solid rgba(255,204,102,.4)}
+  .msg.bad{background:rgba(255,107,129,.1);border:1px solid rgba(255,107,129,.4)}
+  .msg .row{margin-top:10px}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600}
+  td.mono{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+  .log{max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .log div{padding:2px 0;border-bottom:1px dashed #2a2d55}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;padding:5px 8px;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer}
+  .result{font-size:1.4rem;font-weight:800;margin-top:10px}
+  .wide{grid-column:1/-1}
+  footer{margin-top:22px;color:var(--muted);font-size:.85rem;display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+  .note{background:#2a2410;border:1px solid #6b5420;color:#f5dfa6;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:16px}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lightchain <span>Human Registry</span></h1>
+    <span class="tag">Interactive concept demo, not a live product</span>
+  </header>
+
+  <div class="note"><strong>This is a concept demo.</strong> Everything here is simulated in your browser with pretend data.
+    No real passport is read, no blockchain is used, and nothing leaves this page. Wallet addresses and codes are random fakes.</div>
+
+  <p class="intro">One passport → one "verified human" badge. Personal data stays on the phone; the registry only stores a private code and a wallet.
+    Try it: connect a wallet, scan a demo passport, then try the same passport from a second wallet, recover a lost wallet, and check the giveaway.</p>
+
+  <div class="grid">
+
+    <!-- 1. Wallet -->
+    <section class="card">
+      <h2><span class="n">1</span> Your wallet</h2>
+      <p class="sub">A pretend wallet address, generated in your browser.</p>
+      <div class="row">
+        <button id="btnConnect">Connect wallet</button>
+        <button id="btnNewWallet" class="secondary" disabled>Switch to another wallet</button>
+        <button id="btnLost" class="warn" disabled>I lost this wallet</button>
+      </div>
+      <div class="addr" id="walletAddr">Not connected</div>
+      <div id="walletBadge"><span class="badge no">✗ No badge</span></div>
+    </section>
+
+    <!-- 2. Prove -->
+    <section class="card">
+      <h2><span class="n">2</span> Prove you're human</h2>
+      <p class="sub">In real life this happens in a ZKPassport-style phone app. Here it's an animation.</p>
+      <label for="passportSel">Demo document</label>
+      <select id="passportSel">
+        <option value="P-ALPHA">Demo passport A (pretend)</option>
+        <option value="P-BRAVO">Demo passport B (pretend)</option>
+        <option value="MOCK">Test passport (mock / dev mode)</option>
+      </select>
+      <div class="row" style="margin-top:10px">
+        <button id="btnScan" disabled>Scan passport</button>
+      </div>
+      <div class="stage">
+        <div class="phone"><div class="notch"></div><div class="screen" id="screen">Connect a wallet to start</div></div>
+        <ol class="steps" id="steps">
+          <li>Website shows a QR code</li>
+          <li>Phone app receives the request</li>
+          <li>Tap passport chip (NFC)</li>
+          <li>Proof created on the phone</li>
+          <li>Registry checks the proof</li>
+        </ol>
+      </div>
+      <div class="msg" id="scanMsg"></div>
+    </section>
+
+    <!-- 3. Checker -->
+    <section class="card">
+      <h2><span class="n">3</span> App checker</h2>
+      <p class="sub">Any Lightchain app asks one question and gets yes or no. No personal data.</p>
+      <label for="checkAddr">Wallet to check</label>
+      <input id="checkAddr" placeholder="0x…" spellcheck="false" autocomplete="off">
+      <div class="row" style="margin-top:8px"><button id="btnCheck" class="secondary">isHuman(wallet)</button></div>
+      <div class="chips" id="knownWallets"></div>
+      <div class="result" id="checkResult"></div>
+    </section>
+
+    <!-- 4. Giveaway -->
+    <section class="card">
+      <h2><span class="n">4</span> Giveaway demo</h2>
+      <p class="sub">One entry per human. A second wallet held by the same human is blocked.</p>
+      <div class="row">
+        <button id="btnEnter" class="secondary" disabled>Enter giveaway with current wallet</button>
+        <button id="btnDraw" class="secondary">Draw winner</button>
+      </div>
+      <div class="msg" id="giveMsg"></div>
+      <table style="margin-top:12px"><thead><tr><th>#</th><th>Entry wallet</th></tr></thead><tbody id="entries"><tr><td colspan="2" class="muted">No entries yet</td></tr></tbody></table>
+    </section>
+
+    <!-- 5. Registry -->
+    <section class="card wide">
+      <h2><span class="n">5</span> What the registry stores (simulated)</h2>
+      <p class="sub">Only a private code (nullifier) and a wallet. No names, birthdays or document numbers. Verified humans: <strong id="count">0</strong></p>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>Private code (nullifier)</th><th>Wallet with the badge</th><th>Since</th></tr></thead>
+          <tbody id="registry"><tr><td colspan="3" class="muted">Empty</td></tr></tbody></table>
+      </div>
+      <label style="margin-top:14px">Event log</label>
+      <div class="log" id="log"><div class="muted">Waiting…</div></div>
+    </section>
+  </div>
+
+  <footer>
+    <span>Concept by <strong>KeikoDev</strong> · MIT License · This is a concept demo. Nothing is deployed.</span>
+    <span>Real version would use ZKPassport proofs verified on Lightchain (chain 9200).</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ---------- pretend helpers ----------
+  const $ = id => document.getElementById(id);
+  const DOMAIN = "demo.example";            // pretend permanent domain
+  const SCOPE  = "lightchain-human-registry";
+  function randHex(n){ const a=new Uint8Array(n); (window.crypto||{}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_,i)=>a[i]=Math.random()*256|0);
+    return Array.from(a,b=>b.toString(16).padStart(2,"0")).join(""); }
+  const fakeAddr = () => "0x" + randHex(20);
+  const short = a => a ? a.slice(0,6)+"…"+a.slice(-4) : "";
+  // Pretend hash (NOT cryptographic): just makes a stable code from passport + domain + scope.
+  function fakeHash(s){ let out="", h=0x811c9dc5;
+    for(let r=0;r<8;r++){ for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i)+r; h=Math.imul(h,16777619)>>>0; } out+=h.toString(16).padStart(8,"0"); }
+    return "0x"+out; }
+  const now = () => new Date().toLocaleTimeString();
+
+  // ---------- simulated registry state ----------
+  const walletOf = {};      // nullifier -> wallet
+  const nullifierOf = {};   // wallet -> nullifier
+  const since = {};         // nullifier -> time
+  const known = [];         // wallets seen in this session
+  const entries = [];       // giveaway: {wallet, nullifier}
+  let wallet = null, busy = false, pendingMove = null;
+
+  function isHuman(w){ return !!(w && nullifierOf[w.toLowerCase()]); }
+  function log(t){ const d=document.createElement("div"); d.textContent="["+now()+"] "+t;
+    const L=$("log"); if(L.firstChild && L.firstChild.classList && L.firstChild.classList.contains("muted")) L.innerHTML="";
+    L.prepend(d); }
+  function msg(el,cls,html){ el.className="msg show "+cls; el.innerHTML=html; }
+
+  // ---------- rendering ----------
+  function render(){
+    $("walletAddr").textContent = wallet || "Not connected";
+    $("walletBadge").innerHTML = isHuman(wallet) ? '<span class="badge yes">✓ Verified human</span>' : '<span class="badge no">✗ No badge</span>';
+    ["btnNewWallet","btnLost","btnScan","btnEnter"].forEach(id => $(id).disabled = !wallet || busy);
+    $("btnConnect").disabled = busy;
+    $("btnConnect").textContent = wallet ? "Reconnect (new fake address)" : "Connect wallet";
+    const keys = Object.keys(walletOf);
+    $("count").textContent = keys.length;
+    $("registry").innerHTML = keys.length ? keys.map(n =>
+      `<tr><td class="mono">${n}</td><td class="mono">${walletOf[n]}</td><td>${since[n]}</td></tr>`).join("")
+      : '<tr><td colspan="3" class="muted">Empty</td></tr>';
+    $("knownWallets").innerHTML = known.map(w =>
+      `<button class="chip" data-w="${w}">${short(w)} ${isHuman(w)?"✓":"✗"}</button>`).join("");
+    $("entries").innerHTML = entries.length ? entries.map((e,i)=>`<tr><td>${i+1}</td><td class="mono">${e.wallet}</td></tr>`).join("")
+      : '<tr><td colspan="2" class="muted">No entries yet</td></tr>';
+  }
+  function setWallet(w){ wallet = w; if(!known.includes(w)) known.push(w); $("checkAddr").value = w; render(); }
+
+  // ---------- phone animation ----------
+  function qrHTML(){ let h='<div class="qr">'; const bits=randHex(56);
+    for(let i=0;i<441;i++){ const r=Math.floor(i/21), c=i%21;
+      const finder=(r<7&&c<7)||(r<7&&c>13)||(r>13&&c<7);
+      const fb = finder ? ((r%6===0||c%6===0||r===20||c===20||(r>=2&&r<=4&&c>=2&&c<=4)||(r>=2&&r<=4&&c>=16&&c<=18)||(r>=16&&r<=18&&c>=2&&c<=4))) : (parseInt(bits[i%112],16)&(1<<(i%4)));
+      h+=`<i class="${fb?"b":""}"></i>`; }
+    return h+'</div>'; }
+  const screens = [
+    () => qrHTML()+'<div>Scan with the app</div>',
+    () => '<div class="spinner"></div><div>Request received<br><small>"Prove you are human"</small></div>',
+    () => '<div class="waves"></div><div class="passport"></div><div>Hold passport to phone…</div>',
+    () => '<div class="spinner"></div><div>Creating zero-knowledge proof on this phone…</div>',
+    () => '<div class="spinner"></div><div>Sending proof to registry…</div>',
+  ];
+  function setStep(i){ [...$("steps").children].forEach((li,k)=>{ li.className = k<i ? "done" : (k===i ? "active" : ""); });
+    if(i < screens.length) $("screen").innerHTML = screens[i](); }
+
+  // ---------- registry logic (mirrors HumanRegistry.sol) ----------
+  function register(nullifier, isMock, moveIfExists){
+    const w = wallet.toLowerCase();
+    if(isMock){ log("register() REVERT: mock / dev-mode proof rejected");
+      return {cls:"bad", html:"<strong>Rejected: test passport.</strong> Mock (dev-mode) proofs are never accepted by the registry."}; }
+    const current = walletOf[nullifier];
+    if(current === w){ log("register() REVERT: AlreadyVerifiedHuman (same wallet)");
+      return {cls:"ok", html:"<strong>Already verified.</strong> This wallet already holds the badge for this passport."}; }
+    if(nullifierOf[w] && nullifierOf[w] !== nullifier){ log("register() REVERT: WalletAlreadyHasBadge");
+      return {cls:"bad", html:"<strong>This wallet already has a badge</strong> from a different document. One badge per wallet."}; }
+    if(!current){
+      walletOf[nullifier]=w; nullifierOf[w]=nullifier; since[nullifier]=now();
+      log("HumanRegistered(wallet="+short(w)+", nullifier="+nullifier.slice(0,12)+"…)");
+      return {cls:"ok", html:"<strong>✓ Badge granted.</strong> This wallet is now a verified human. The registry stored only a private code and your wallet."}; }
+    if(!moveIfExists){ log("register() REVERT: AlreadyVerifiedHuman(current="+short(current)+")");
+      pendingMove = nullifier;
+      return {cls:"warn", html:`<strong>Already verified human.</strong> This passport already holds a badge on <span class="mono">${short(current)}</span>. One passport = one badge.
+        <div class="row"><button id="btnMoveHere" class="warn">That old wallet is lost: move badge here</button></div>`}; }
+    delete nullifierOf[current]; walletOf[nullifier]=w; nullifierOf[w]=nullifier; since[nullifier]=now();
+    log("BadgeMoved(from="+short(current)+", to="+short(w)+")");
+    return {cls:"ok", html:`<strong>✓ Badge moved.</strong> <span class="mono">${short(current)}</span> is switched off; this wallet is now the verified human.`};
+  }
+
+  function scan(moveIfExists){
+    if(!wallet || busy) return;
+    busy = true; pendingMove = null; $("scanMsg").className="msg"; render();
+    const pid = $("passportSel").value, isMock = pid==="MOCK";
+    log("Proof request: scope=\""+SCOPE+"\", bound to "+short(wallet));
+    let i=0; setStep(0);
+    const t = setInterval(()=>{
+      i++; setStep(i);
+      if(i>=screens.length){
+        clearInterval(t);
+        const nullifier = isMock ? "0x"+"0".repeat(63)+"1" : fakeHash(pid+"|"+DOMAIN+"|"+SCOPE);
+        const r = register(nullifier, isMock, moveIfExists);
+        $("screen").innerHTML = r.cls==="ok" ? '<div class="check">✓</div><div>Done</div>' : '<div class="check" style="color:var(--warn)">!</div><div>See message</div>';
+        msg($("scanMsg"), r.cls, r.html);
+        const mb = $("btnMoveHere"); if(mb) mb.onclick = () => scan(true);
+        busy=false; render();
+      }
+    }, 800);
+  }
+
+  // ---------- giveaway ----------
+  function enter(){
+    const w = wallet.toLowerCase();
+    if(!isHuman(w)){ msg($("giveMsg"),"bad","<strong>Entry refused.</strong> This wallet isn't a verified human."); log("Giveaway: refused "+short(w)+" (not human)"); return; }
+    const n = nullifierOf[w], prev = entries.find(e=>e.nullifier===n);
+    if(prev){ msg($("giveMsg"),"warn",`<strong>Duplicate blocked.</strong> This human already entered (as <span class="mono">${short(prev.wallet)}</span>).`); log("Giveaway: duplicate human blocked"); return; }
+    entries.push({wallet:w, nullifier:n}); msg($("giveMsg"),"ok","<strong>✓ Entered.</strong> One entry for this human."); log("Giveaway: entry from "+short(w)); render();
+  }
+  function draw(){
+    if(!entries.length){ msg($("giveMsg"),"warn","No entries yet."); return; }
+    const e = entries[Math.floor(Math.random()*entries.length)];
+    msg($("giveMsg"),"ok",`🎉 Pretend winner: <span class="mono">${short(e.wallet)}</span> (out of ${entries.length} unique humans)`); log("Giveaway: drew "+short(e.wallet));
+  }
+
+  // ---------- checker ----------
+  function check(){
+    const a = $("checkAddr").value.trim();
+    if(!/^0x[0-9a-fA-F]{40}$/.test(a)){ $("checkResult").innerHTML='<span style="color:var(--warn)">Enter a 0x… address (40 hex characters)</span>'; return; }
+    const yes = isHuman(a);
+    $("checkResult").innerHTML = `isHuman(${short(a)}) → <span style="color:${yes?"var(--ok)":"var(--bad)"}">${yes?"true ✓":"false ✗"}</span>`;
+    log("isHuman("+short(a)+") = "+yes);
+  }
+
+  // ---------- wire up ----------
+  $("btnConnect").onclick = () => { setWallet(fakeAddr()); log("Connected pretend wallet "+short(wallet)); $("screen").textContent="Ready. Tap Scan passport."; };
+  $("btnNewWallet").onclick = () => { setWallet(fakeAddr()); log("Switched to another pretend wallet "+short(wallet)); };
+  $("btnLost").onclick = () => { const old=wallet; setWallet(fakeAddr());
+    log("Lost wallet "+short(old)+"; now using "+short(wallet));
+    msg($("scanMsg"),"warn","You're on a <strong>new wallet</strong>. Scan the <strong>same passport</strong> again, then choose <em>move badge here</em>."); };
+  $("btnScan").onclick = () => scan(false);
+  $("btnEnter").onclick = enter;
+  $("btnDraw").onclick = draw;
+  $("btnCheck").onclick = check;
+  $("checkAddr").addEventListener("keydown", e => { if(e.key==="Enter") check(); });
+  $("knownWallets").addEventListener("click", e => { const w=e.target.getAttribute("data-w"); if(w){ $("checkAddr").value=w; check(); } });
+  render();
+})();
+</script>
+</body>
+</html>
